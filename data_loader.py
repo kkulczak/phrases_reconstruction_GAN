@@ -1,0 +1,170 @@
+import logging
+import os
+import numpy as np
+import torch
+from torch.nn.functional import one_hot
+from torch.utils.data import Dataset
+from nltk.corpus import masc_tagged
+import nltk
+
+GAP_CHARACTER = '_'
+
+
+class AmericanNationalCorpusDataset(Dataset):
+    """
+        The Open American National Corpus Dataset
+    """
+    source_data = None
+
+    def __init__(
+        self,
+        dataset_size: int,
+        phrase_length: int = 20,
+        concat_window: int = 11,
+        ascii_size: int = 256,
+        transform_raw_phrase: callable = None,
+        transform_sample_dict: callable = None
+    ):
+        # Download corpus
+        if os.path.join(os.getcwd(), 'raw_phrases') not in nltk.data.path:
+            nltk.data.path.append(os.path.join(os.getcwd(), 'raw_phrases'))
+        try:
+            nltk.data.find('corpora/masc_tagged.zip')
+        except LookupError as e:
+            nltk.download(
+                'masc_tagged',
+                download_dir='raw_phrases',
+                quiet=True,
+            )
+
+        self.phrase_length = phrase_length
+        self.concat_window = concat_window
+        self.ascii_size = ascii_size
+        self.transform_raw_phrase = transform_raw_phrase
+        self.transform_sample_dict = transform_sample_dict
+        self.raw_phrases = [
+            processed
+            for phrase in masc_tagged.sents()[:dataset_size]
+            if len(phrase) > 4 and len(phrase[0]) < 30
+            for processed in [self.preprocess_phrase(phrase)]
+            if processed is not None
+        ]
+
+        self.raw_phrases = np.array(
+            self.raw_phrases
+        )
+
+        self.raw_phrases = one_hot(
+            torch.from_numpy(self.raw_phrases),
+            num_classes=self.ascii_size
+        ).numpy()
+
+    def build_windowed_phrase(self, feat):
+        windowed_phrase = np.zeros(
+            shape=[
+                # self.data.shape[0],
+                self.phrase_length,
+                self.raw_phrases.shape[-1] * self.concat_window
+            ],
+            dtype=np.float32
+        )
+
+        for l in range(len(feat)):
+            half_window = int((self.concat_window - 1) / 2)
+            if l < half_window:
+                pad_feat = np.tile(feat[0], (half_window - l, 1))
+                concat_feat = np.concatenate(
+                    [pad_feat, feat[0:l + half_window + 1]], axis=0
+                )
+            elif l > len(feat) - half_window - 1:
+                pad_feat = np.tile(
+                    feat[-1],
+                    (half_window - (len(feat) - l - 1), 1)
+                )
+                concat_feat = np.concatenate(
+                    [feat[l - half_window:len(feat)], pad_feat], axis=0
+                )
+            else:
+                concat_feat = feat[l - half_window:l + half_window + 1]
+
+            windowed_phrase[l] = np.reshape(concat_feat, [-1])
+        return windowed_phrase
+
+    def preprocess_phrase(self, phrase):
+        lengths = np.array([len(x) for x in phrase])
+        lengths[1:] += 1
+        cum_sum = np.cumsum(lengths)
+        last_word_id = np.searchsorted(
+            cum_sum > self.phrase_length,
+            1,
+            side='left'
+        )
+        processed = ' '.join(phrase[:last_word_id]).lower()
+
+        _ascii = np.array([int(ord(x)) for x in processed], dtype=int)
+
+        if (_ascii > self.ascii_size).any():
+            return None
+        if (_ascii == ord(GAP_CHARACTER)).any():
+            return None
+
+        _ascii = np.concatenate(
+            (_ascii,
+             ord(GAP_CHARACTER) * np.ones(
+                 self.phrase_length - _ascii.size,
+                 dtype=int)
+             )
+        )
+
+        if (_ascii == ord(GAP_CHARACTER)).all():
+            breakpoint()
+
+        return _ascii
+
+    def __len__(self):
+        return self.raw_phrases.shape[0]
+
+    def __getitem__(self, item):
+        sample = self.raw_phrases[item]
+        if self.transform_raw_phrase is not None:
+            sample = self.transform_raw_phrase(sample)
+
+        sample_dict = {
+            'raw_phrase':    sample.reshape(-1),
+            'concat_phrase': self.build_windowed_phrase(
+                sample
+            ),
+        }
+        if self.transform_sample_dict is not None:
+            sample_dict = self.transform_sample_dict(sample_dict)
+
+        return sample_dict
+
+    def show(self, sample):
+        if isinstance(sample, dict):
+            xs = sample['raw_phrase'].numpy()
+        elif isinstance(sample, np.ndarray):
+            xs = sample
+        elif isinstance(sample, torch.Tensor):
+            xs = sample.numpy()
+        else:
+            raise ValueError('sample must be dict or array or torch.Tensor')
+        xs = xs.reshape(-1, self.ascii_size)
+        return ''.join(chr(x) for x in np.argmax(xs, axis=1))
+
+
+class ObliterateLetters(object):
+    def __init__(self, obliterate_ratio: float):
+        self.obliterate_ratio = obliterate_ratio
+
+    def __call__(self, sample):
+        ids = np.random.uniform(size=sample.shape[:-1]) < self.obliterate_ratio
+        one_hot_gap_character = np.zeros(sample.shape[-1], dtype=sample.dtype)
+        one_hot_gap_character[ord(GAP_CHARACTER)] = 1
+        sample[ids, :] = one_hot_gap_character
+        return sample
+
+
+class ToTensor(object):
+    def __call__(self, sample_dict):
+        return {k: torch.from_numpy(v) for k, v in sample_dict.items()}
