@@ -1,7 +1,7 @@
 import torch
-from torch.autograd import Variable
 from torch import nn
-import numpy as np
+
+from src.utils import softmax_gumbel_noise
 
 
 class GeneratorNet(nn.Module):
@@ -44,17 +44,6 @@ class GeneratorNet(nn.Module):
             self.config['phrase_length'],
             self.config['ascii_size']
         )
-        soft_prob = self.softmax_gumbel_noise(log_prob, temperature)
+        soft_prob = softmax_gumbel_noise(log_prob, temperature)
 
         return soft_prob
-
-    @staticmethod
-    def softmax_gumbel_noise(
-        logits: torch.Tensor,
-        temperature: float,
-        eps: float = 1e-20
-    ):
-        U = torch.rand(logits.shape, device=logits.device)
-        noise = -torch.log(-torch.log(U + eps) + eps)
-        y = logits + noise
-        return nn.functional.softmax(y / temperature, dim=-1)

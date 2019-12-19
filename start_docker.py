@@ -175,6 +175,7 @@ if __name__ == '__main__':
         '-w', '/home/shared',
         '--name', container_name,
         '--hostname', container_name,
+        '--shm-size', '4g',
         *optional_run_args,
         image_tag,
         *args.cmd.replace('"', '').split()

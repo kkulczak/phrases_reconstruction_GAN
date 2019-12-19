@@ -7,7 +7,7 @@ from torch.utils.data import Dataset
 from nltk.corpus import masc_tagged
 import nltk
 
-GAP_CHARACTER = '_'
+GAP_CHARACTER = '\0'
 
 
 class AmericanNationalCorpusDataset(Dataset):
@@ -18,10 +18,7 @@ class AmericanNationalCorpusDataset(Dataset):
 
     def __init__(
         self,
-        dataset_size: int,
-        phrase_length: int = 20,
-        concat_window: int = 11,
-        ascii_size: int = 256,
+        config,
         transform_raw_phrase: callable = None,
         transform_sample_dict: callable = None
     ):
@@ -31,20 +28,23 @@ class AmericanNationalCorpusDataset(Dataset):
         try:
             nltk.data.find('corpora/masc_tagged.zip')
         except LookupError as e:
+            logging.info(
+                'Corpus not found. Downloading american national corpus'
+            )
             nltk.download(
                 'masc_tagged',
                 download_dir='raw_phrases',
                 quiet=True,
             )
 
-        self.phrase_length = phrase_length
-        self.concat_window = concat_window
-        self.ascii_size = ascii_size
+        self.phrase_length = config['phrase_length']
+        self.concat_window = config['concat_window']
+        self.ascii_size = config['ascii_size']
         self.transform_raw_phrase = transform_raw_phrase
         self.transform_sample_dict = transform_sample_dict
         self.raw_phrases = [
             processed
-            for phrase in masc_tagged.sents()[:dataset_size]
+            for phrase in masc_tagged.sents()[:config['dataset_size']]
             if len(phrase) > 4 and len(phrase[0]) < 30
             for processed in [self.preprocess_phrase(phrase)]
             if processed is not None
@@ -130,7 +130,7 @@ class AmericanNationalCorpusDataset(Dataset):
             sample = self.transform_raw_phrase(sample)
 
         sample_dict = {
-            'raw_phrase':    sample.reshape(-1),
+            'raw_phrase':    sample,
             'concat_phrase': self.build_windowed_phrase(
                 sample
             ),
@@ -150,7 +150,10 @@ class AmericanNationalCorpusDataset(Dataset):
         else:
             raise ValueError('sample must be dict or array or torch.Tensor')
         xs = xs.reshape(-1, self.ascii_size)
-        return ''.join(chr(x) for x in np.argmax(xs, axis=1))
+        return ''.join(
+            chr(x) if x != ord(GAP_CHARACTER) else "_"
+            for x in np.argmax(xs, axis=1)
+        )
 
 
 class ObliterateLetters(object):

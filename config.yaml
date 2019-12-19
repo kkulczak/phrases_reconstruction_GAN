@@ -2,18 +2,18 @@
 # Model
 gen_hidden_size: 512
 gen_z_size: 5
-#dis_emb_size: 256
-#dis_hidden_1_size: 256
-#dis_hidden_2_size: 256
+dis_emb_size: 17
+dis_hidden_1_size: 29
+dis_hidden_2_size: 31
 #seg_loss_ratio: 0.5
 #penalty_ratio: 10
 #frame_temp: 0.9
 
 # Data loader
 dataset_size: 1000
-phrase_length: 64
+phrase_length: 67
 concat_window: 11
-ascii_size: 256
+ascii_size: 257
 batch_size: 7
 num_workers: 0
 #phn_max_length: 75
