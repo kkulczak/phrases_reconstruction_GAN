@@ -23,8 +23,8 @@ RUN pip install \
     numpy \
     pyyaml \
     pandas \
-    nltk
-
+    nltk \
+    tensorboard
 
 ###############################################################################
 # Adding user with same priviliges as host user. With free access to sudo group

@@ -172,6 +172,7 @@ if __name__ == '__main__':
     run_args = [
         'docker', 'run',
         '-v', '{}:/home/shared'.format(args.project_dir),
+        '-v', '/etc/timezone:/etc/timezone:ro',
         '-w', '/home/shared',
         '--name', container_name,
         '--hostname', container_name,

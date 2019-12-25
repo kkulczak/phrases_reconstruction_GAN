@@ -27,10 +27,20 @@ class GeneratorNet(nn.Module):
         )
 
     def forward(self, x, temperature: float = 0.9):
+        x = x.reshape(
+            -1,
+            self.config['phrase_length'] * self.config['concat_window'] *
+            self.config['ascii_size']
+        )
         batch_size = x.shape[0]
-        x = x.reshape(batch_size, -1)
 
-        generator_seed = torch.rand(
+        # generator_seed = torch.rand(
+        #     (batch_size, self.config['gen_z_size']),
+        #     dtype=torch.float32,
+        #     device=x.device,
+        # )
+        # TODO remove replacing ranodm by zeros
+        generator_seed = torch.zeros(
             (batch_size, self.config['gen_z_size']),
             dtype=torch.float32,
             device=x.device,

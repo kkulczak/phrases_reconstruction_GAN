@@ -30,34 +30,3 @@ def generate_inter_sample(
         alpha = torch.rand([real.shape[0], 1, 1], device=fake.device)
         inter_sample = real + alpha * (fake - real)
         return inter_sample
-
-
-# gradients = tf.gradients(inter_sample_pred, [inter_sample])[0]
-# slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients),
-# reduction_indices=[1,2]))
-# return tf.reduce_mean((slopes-1.)**2)
-def compute_gradient_penalty(output, input):
-    # ref: https://github.com/eriklindernoren/PyTorch-GAN/blob/master
-    # /implementations/wgan_gp/wgan_gp.py
-    '''
-
-    :param input: state[index]
-    :param network: actor or critic
-    :return: gradient penalty
-    '''
-    # TODO Fix This shiit. None value returned
-    input_ = torch.tensor(input).requires_grad_(True)
-    print(output)
-    musk = torch.ones_like(output).requires_grad(True)
-    gradients = torch.autograd.grad(
-        output,
-        input_,
-        grad_outputs=musk,
-        retain_graph=True,
-        create_graph=True,
-        allow_unused=True
-    )[0]  # get tensor from tuple
-    breakpoint()
-    gradients = gradients.view(-1, 1)
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
-    return gradient_penalty
