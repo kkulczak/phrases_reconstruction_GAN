@@ -34,13 +34,7 @@ class GeneratorNet(nn.Module):
         )
         batch_size = x.shape[0]
 
-        # generator_seed = torch.rand(
-        #     (batch_size, self.config['gen_z_size']),
-        #     dtype=torch.float32,
-        #     device=x.device,
-        # )
-        # TODO remove replacing ranodm by zeros
-        generator_seed = torch.zeros(
+        generator_seed = torch.rand(
             (batch_size, self.config['gen_z_size']),
             dtype=torch.float32,
             device=x.device,
