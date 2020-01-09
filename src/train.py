@@ -132,8 +132,8 @@ def train(config, save_dir, device='cpu'):
 
             gen_loss = - (fake_score - real_score.item())
 
-            gen_loss.backward()
-            optimizer_gen.step()
+            # gen_loss.backward()
+            # optimizer_gen.step()
 
             # Logging values
             logs.append([

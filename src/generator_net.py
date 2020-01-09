@@ -27,6 +27,18 @@ class GeneratorNet(nn.Module):
         )
 
     def forward(self, x, temperature: float = 0.9):
+        #############################
+        # Changing only first letters
+        #############################
+        sl = slice(
+            self.config['ascii_size'] * (self.config['concat_window'] // 2),
+            self.config['ascii_size'] * (self.config['concat_window'] // 2 + 1)
+        )
+        x = x[:, :, sl]
+        letter = x[0, -1].clone()
+        x[:,:3] = letter.clone()
+        return x
+
         x = x.reshape(
             -1,
             self.config['phrase_length'] * self.config['concat_window'] *
