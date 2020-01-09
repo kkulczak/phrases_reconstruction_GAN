@@ -87,9 +87,9 @@ class DiscriminatorNet(nn.Module):
             config['dis_hidden_2_size'] * 4
             * config['phrase_length']
         )
-        self.dense = nn.Linear(
-            self.dense_input_size,
-            1
+        self.dense = nn.Sequential(
+            nn.Linear(self.dense_input_size, 1),
+            nn.Sigmoid()
         )
 
     def forward(self, x):
