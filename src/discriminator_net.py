@@ -1,14 +1,16 @@
 import torch
 from torch import nn
-
+import numpy as np
 from src.utils import LReluCustom
 
 
 class DiscriminatorNet(nn.Module):
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, raw_phrases: np.array):
         super(DiscriminatorNet, self).__init__()
         # self.n_feature = config['phrase_length'] * config['ascii_size']
         # self.n_out = config['phrase_length'] * config['ascii_size']
+        self.raw_phrases = torch.from_numpy(np.argmax(raw_phrases, axis=-1)).to('cuda')
+
         self.config = config
 
         self.embedding_matrix = nn.Embedding(
@@ -93,6 +95,18 @@ class DiscriminatorNet(nn.Module):
         )
 
     def forward(self, x):
+        ###############################
+        # Overfitting Discriminator
+        ###############################
+        # data = np.argmax(x.detach().cpu().numpy(), axis=-1)
+        out = []
+        for sample in x:
+            comparision = ((self.raw_phrases - sample) ** 2).sum(dim=(-2, -1))
+            res = torch.nn.functional.softmax(comparision)
+            out.append(res)
+        return torch.from_numpy(np.array(out)).to(x.device)
+        #############
+
         x = torch.matmul(x, self.embedding_matrix.weight)
         conv1d_input = x.transpose(-1, -2)
         output_c_3_1 = self.conv_3_1(conv1d_input)

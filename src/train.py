@@ -65,7 +65,7 @@ def train(config, save_dir, device='cpu'):
     )
 
     generator = GeneratorNet(config).to(device)
-    discriminator = DiscriminatorNet(config).to(device)
+    discriminator = DiscriminatorNet(config, real_phrases.raw_phrases).to(device)
 
     optimizer_gen = optim.Adam(
         generator.parameters(),
@@ -103,11 +103,12 @@ def train(config, save_dir, device='cpu'):
             )
             real_sample_pred = discriminator.forward(real_sample)
 
-            gradient_penalty = compute_gradient_penalty(
-                discriminator,
-                real_sample,
-                fake_sample
-            )
+            # gradient_penalty = compute_gradient_penalty(
+            #     discriminator,
+            #     real_sample,
+            #     fake_sample
+            # )
+            gradient_penalty = 0
 
             fake_score = fake_sample_pred.mean()
             real_score = real_sample_pred.mean()
@@ -117,9 +118,9 @@ def train(config, save_dir, device='cpu'):
                 # + config['gradient_penalty_ratio'] * gradient_penalty
             )
 
-            dis_loss.backward()
-
-            optimizer_dis.step()
+            # dis_loss.backward()
+            #
+            # optimizer_dis.step()
 
             #### Generator traning
             generator.zero_grad()
