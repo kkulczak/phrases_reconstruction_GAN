@@ -1,11 +1,11 @@
 
 # Model
 gen_hidden_size: 512
-gen_z_size: 5
+gen_z_size: 0
 dis_emb_size: 256
 dis_hidden_1_size: 256
 dis_hidden_2_size: 256
-gradient_penalty_ratio: 10
+gradient_penalty_ratio: 2
 #frame_temp: 0.9
 
 # Data loader
@@ -14,12 +14,12 @@ replace_with_noise_probability: 0.0
 phrase_length: 60
 concat_window: 11
 ascii_size: 256
-num_workers: 4
+num_workers: 8
 
 ## Train
-num_epochs: 30
+num_epochs: 200
 batch_size: 64
 learning_rate: 0.001
-eval_epoch_every: 1
+eval_epoch_every: 20
 
 

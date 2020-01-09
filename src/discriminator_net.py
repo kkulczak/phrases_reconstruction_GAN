@@ -89,7 +89,7 @@ class DiscriminatorNet(nn.Module):
         )
         self.dense = nn.Sequential(
             nn.Linear(self.dense_input_size, 1),
-            nn.Sigmoid()
+            # nn.Sigmoid()
         )
 
     def forward(self, x):

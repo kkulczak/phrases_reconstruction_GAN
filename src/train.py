@@ -114,7 +114,7 @@ def train(config, save_dir, device='cpu'):
 
             dis_loss = (
                 - (real_score - fake_score)
-                # + config['gradient_penalty_ratio'] * gradient_penalty
+                + config['gradient_penalty_ratio'] * gradient_penalty
             )
 
             dis_loss.backward()
