@@ -49,14 +49,21 @@ if __name__ == '__main__':
         default='gpu',
         choices=['gpu', 'cpu'],
     )
+    parser.add_argument(
+        '--disable-logs',
+        action='store_true',
+    )
     args = parser.parse_args()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    mydir = os.path.join(
-        os.getcwd(),
-        'data',
-        datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
-    )
+    if not args.disable_logs:
+        mydir = os.path.join(
+            os.getcwd(),
+            'data',
+            datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+        )
+    else:
+        mydir = None
 
     if args.device == 'gpu':
         device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')

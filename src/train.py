@@ -78,8 +78,9 @@ def train(config, save_dir, device='cpu'):
         betas=(0.5, 0.9),
     )
 
-    writer = SummaryWriter(save_dir)
-    copyfile('config.yaml', os.path.join(save_dir, 'config.yaml'))
+    if save_dir is not None:
+        writer = SummaryWriter(save_dir)
+        copyfile('config.yaml', os.path.join(save_dir, 'config.yaml'))
 
     for epoch in range(config['num_epochs']):
         logging.info(f'Epoch: {epoch + 1}')
@@ -113,7 +114,7 @@ def train(config, save_dir, device='cpu'):
 
             dis_loss = (
                 - (real_score - fake_score)
-                + config['gradient_penalty_ratio'] * gradient_penalty
+                # + config['gradient_penalty_ratio'] * gradient_penalty
             )
 
             dis_loss.backward()
@@ -152,20 +153,21 @@ def train(config, save_dir, device='cpu'):
             'scores/real_score',
             'scores/fake_score',
         ]
-        for label, x in zip(logs_labels, epoch_logs.T):
-            writer.add_scalars(
-                label,
-                {
-                    'min':  x.min(),
-                    'mean': x.mean(),
-                    'max':  x.max(),
-                },
-                global_step=epoch + 1
-            )
-            writer.add_histogram(
-                f'hist_{label}',
-                x
-            )
+        if save_dir is not None:
+            for label, x in zip(logs_labels, epoch_logs.T):
+                writer.add_scalars(
+                    label,
+                    {
+                        'min':  x.min(),
+                        'mean': x.mean(),
+                        'max':  x.max(),
+                    },
+                    global_step=epoch + 1
+                )
+                writer.add_histogram(
+                    f'hist_{label}',
+                    x
+                )
         if (
             epoch % config['eval_epoch_every'] == 0
             or epoch + 1 == config['num_epochs']
@@ -177,19 +179,22 @@ def train(config, save_dir, device='cpu'):
                 device
             )
             logging.info(f'Accuracy: {acc:.2f}')
-            writer.add_scalar(
-                'accuracy/accuracy',
-                acc,
-                global_step=epoch + 1
-            )
+            if save_dir is not None:
+                writer.add_scalar(
+                    'accuracy/accuracy',
+                    acc,
+                    global_step=epoch + 1
+                )
 
         # Model saving
-        torch.save(
-            generator.state_dict(),
-            os.path.join(save_dir, f'epoch_{epoch + 1}_generator.pt')
-        )
-        torch.save(
-            discriminator.state_dict(),
-            os.path.join(save_dir, f'epoch_{epoch + 1}_discriminator.pt')
-        )
-    writer.close()
+        if save_dir is not None:
+            torch.save(
+                generator.state_dict(),
+                os.path.join(save_dir, f'epoch_{epoch + 1}_generator.pt')
+            )
+            torch.save(
+                discriminator.state_dict(),
+                os.path.join(save_dir, f'epoch_{epoch + 1}_discriminator.pt')
+            )
+    if save_dir is not None:
+        writer.close()
