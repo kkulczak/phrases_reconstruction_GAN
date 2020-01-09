@@ -70,7 +70,7 @@ def show_examples(args, config, device='cpu'):
     with torch.no_grad():
         for x in itertools.islice(noisy_data_loader, 5):
             _input = x['concat_phrase'].to(device)
-            out = generator.forward(_input)
+            out = generator.forward(_input).cpu()
             print('#' * 40)
             print(noisy_phrases.show(x['raw_phrase']))
             print(noisy_phrases.show(out))

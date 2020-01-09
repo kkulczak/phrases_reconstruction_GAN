@@ -111,8 +111,10 @@ def train(config, save_dir, device='cpu'):
             fake_score = fake_sample_pred.mean()
             real_score = real_sample_pred.mean()
 
-            dis_loss = - (real_score - fake_score) \
-                       + config['gradient_penalty_ratio'] * gradient_penalty
+            dis_loss = (
+                - (real_score - fake_score)
+                + config['gradient_penalty_ratio'] * gradient_penalty
+            )
 
             dis_loss.backward()
 
@@ -120,8 +122,8 @@ def train(config, save_dir, device='cpu'):
 
             #### Generator traning
             generator.zero_grad()
-
-            fake_sample = generator.forward(gen_input, temperature=0.9)
+            # Not needed???
+            # fake_sample = generator.forward(gen_input, temperature=0.9)
             fake_sample_pred = discriminator.forward(
                 fake_sample
             )
