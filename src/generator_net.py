@@ -17,14 +17,12 @@ class GeneratorNet(nn.Module):
         self.hidden1 = nn.Sequential(
             nn.Linear(
                 self.n_feature,
-                512
+                config['gen_hidden_size']
             ),
-            nn.ReLU()
+            nn.ReLU(),
+            nn.Linear(config['gen_hidden_size'], self.n_out),
         )
 
-        self.hidden2 = nn.Sequential(
-            nn.Linear(512, self.n_out),
-        )
 
     def forward(self, x, temperature: float = 0.9):
         x = x.reshape(
@@ -42,7 +40,6 @@ class GeneratorNet(nn.Module):
 
         x = torch.cat([generator_seed, x], dim=1)
         x = self.hidden1(x)
-        x = self.hidden2(x)
         log_prob = x.reshape(
             batch_size,
             self.config['phrase_length'],

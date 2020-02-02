@@ -1,7 +1,9 @@
 import datetime
 import logging
 import os
+import shutil
 from argparse import ArgumentParser
+from glob import glob
 from shutil import copyfile
 
 import torch
@@ -53,14 +55,23 @@ if __name__ == '__main__':
         '--disable-logs',
         action='store_true',
     )
+    parser.add_argument(
+        '--shuffle', '-s',
+        action='store_true'
+    )
     args = parser.parse_args()
     logging.getLogger().setLevel(logging.DEBUG)
 
     if not args.disable_logs:
+        # mydir = os.path.join(
+        #     os.getcwd(),
+        #     'data',
+        #     datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+        # )
         mydir = os.path.join(
             os.getcwd(),
             'data',
-            datetime.datetime.now().strftime('%Y-%m-%d_%H:%M:%S')
+            'temp_logs'
         )
     else:
         mydir = None
@@ -79,6 +90,9 @@ if __name__ == '__main__':
     logging.info(f'config file loaded from: {config_path}')
 
     if args.mode == 'train':
+        for p in glob(os.path.join(mydir, '*tfevents*')):
+            logging.info(f'Removing: {p}')
+            os.remove(p)
         train(
             config,
             mydir,
@@ -94,4 +108,4 @@ if __name__ == '__main__':
     if args.mode == 'eval':
         eval_with_mean_accuracy(args, config, device)
     if args.mode == 'show':
-        show_examples(args, config, device=device)
+        show_examples(args, config, device=device, shuffle=args.shuffle)

@@ -49,7 +49,7 @@ def load_models(args, config, device='cpu') -> Tuple[
     return generator, discriminator
 
 
-def show_examples(args, config, device='cpu'):
+def show_examples(args, config, device='cpu', shuffle=False):
     generator, _ = load_models(args, config, device=device)
 
     noisy_phrases = AmericanNationalCorpusDataset(
@@ -64,7 +64,7 @@ def show_examples(args, config, device='cpu'):
         noisy_phrases,
         batch_size=1,
         num_workers=1,
-        shuffle=False
+        shuffle=shuffle
     )
 
     with torch.no_grad():
@@ -82,7 +82,8 @@ def measure_accuracy(generator, real_data_loader, fake_data_loader, device):
     elements = 0
     with torch.no_grad():
         for fake_batch, real_batch in tqdm(
-            zip(fake_data_loader, real_data_loader)):
+            zip(fake_data_loader, real_data_loader)
+        ):
             _input = fake_batch['concat_phrase'].to(device)
             output = generator.forward(_input)
 
@@ -95,7 +96,7 @@ def measure_accuracy(generator, real_data_loader, fake_data_loader, device):
                 real_batch['raw_phrase'].shape[:-1],
                 1
             )
-    logging.debug(f'{correct} {elements} {correct / elements}')
+    # logging.debug(f'{correct} {elements} {correct / elements}')
     return correct / elements
 
 

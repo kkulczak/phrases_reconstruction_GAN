@@ -1,4 +1,8 @@
 import torch
+from torch.autograd import (
+    Variable,
+    grad,
+)
 
 from src.discriminator_net import DiscriminatorNet
 from src.utils import generate_inter_sample
@@ -6,8 +10,8 @@ from src.utils import generate_inter_sample
 
 def compute_gradient_penalty(
     discriminator: DiscriminatorNet,
-    real_sample: torch.tensor,
-    fake_sample: torch.tensor
+    real_data: torch.tensor,
+    generated_data: torch.tensor
 ):
     # ref: https://github.com/eriklindernoren/PyTorch-GAN/blob/master
     # /implementations/wgan_gp/wgan_gp.py
@@ -17,23 +21,38 @@ def compute_gradient_penalty(
     :param network: actor or critic
     :return: gradient penalty
     '''
-    inter_sample = generate_inter_sample(
-        fake_sample,
-        real_sample
-    ).requires_grad_(True)
+    batch_size = real_data.size()[0]
+    device = generated_data.device
+    # Calculate interpolation
+    alpha = torch.rand(batch_size, 1, 1)
+    alpha = alpha.expand_as(real_data).to(device)
+    interpolated = alpha * real_data.data + (1 - alpha) * generated_data.data
+    interpolated = Variable(
+        interpolated,
+        requires_grad=True
+    ).to(device)
 
-    inter_sample_pred = discriminator.forward(inter_sample)
+    # Calculate probability of interpolated examples
+    prob_interpolated = discriminator.forward(interpolated)
 
-    fake = torch.ones_like(inter_sample_pred, requires_grad=False)
-
-    gradients = torch.autograd.grad(
-        outputs=inter_sample_pred,
-        inputs=inter_sample,
-        grad_outputs=fake,
+    # Calculate gradients of probabilities with respect to examples
+    gradients = grad(
+        outputs=prob_interpolated,
+        inputs=interpolated,
+        grad_outputs=torch.ones(
+            prob_interpolated.size()
+        ).to(device),
         create_graph=True,
-        retain_graph=True,
-        only_inputs=True,
+        retain_graph=True
     )[0]
-    gradients = gradients.view(gradients.size(0), -1)
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
-    return gradient_penalty
+
+    # Gradients have shape (batch_size, num_channels, img_width, img_height),
+    # so flatten to easily take norm per example in batch
+    gradients = gradients.view(batch_size, -1)
+
+    # Derivatives of the gradient close to 0 can cause problems because of
+    # the square root, so manually calculate norm and add epsilon
+    gradients_norm = torch.sqrt(torch.sum(gradients ** 2, dim=1) + 1e-12)
+
+    # Return gradient penalty
+    return ((gradients_norm - 1) ** 2).mean()
