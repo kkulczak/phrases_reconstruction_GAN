@@ -36,12 +36,19 @@ class AmericanNationalCorpusDataset(Dataset):
                 download_dir='raw_phrases',
                 quiet=True,
             )
-
         self.phrase_length = config['phrase_length']
         self.concat_window = config['concat_window']
         self.ascii_size = config['ascii_size']
         self.transform_raw_phrase = transform_raw_phrase
         self.transform_sample_dict = transform_sample_dict
+        self.concat_window_indexes = (
+            (np.arange(self.concat_window) - self.concat_window // 2)[None, :]
+            + (np.arange(self.phrase_length))[:, None]
+        )
+        self.concat_window_indexes[self.concat_window_indexes < 0] = 0
+        self.concat_window_indexes[
+            self.concat_window_indexes >= self.phrase_length
+        ] = self.phrase_length - 1
         self.raw_phrases = [
             processed
             for phrase in masc_tagged.sents()[:config['dataset_size']]
@@ -60,35 +67,7 @@ class AmericanNationalCorpusDataset(Dataset):
         ).numpy()
 
     def build_windowed_phrase(self, feat):
-        windowed_phrase = np.zeros(
-            shape=[
-                # self.data.shape[0],
-                self.phrase_length,
-                self.raw_phrases.shape[-1] * self.concat_window
-            ],
-            dtype=np.float32
-        )
-
-        for l in range(len(feat)):
-            half_window = int((self.concat_window - 1) / 2)
-            if l < half_window:
-                pad_feat = np.tile(feat[0], (half_window - l, 1))
-                concat_feat = np.concatenate(
-                    [pad_feat, feat[0:l + half_window + 1]], axis=0
-                )
-            elif l > len(feat) - half_window - 1:
-                pad_feat = np.tile(
-                    feat[-1],
-                    (half_window - (len(feat) - l - 1), 1)
-                )
-                concat_feat = np.concatenate(
-                    [feat[l - half_window:len(feat)], pad_feat], axis=0
-                )
-            else:
-                concat_feat = feat[l - half_window:l + half_window + 1]
-
-            windowed_phrase[l] = np.reshape(concat_feat, [-1])
-        return windowed_phrase
+        return feat[self.concat_window_indexes].reshape(self.phrase_length, -1)
 
     def preprocess_phrase(self, phrase):
         lengths = np.array([len(x) for x in phrase])
@@ -110,10 +89,10 @@ class AmericanNationalCorpusDataset(Dataset):
 
         _ascii = np.concatenate(
             (_ascii,
-             ord(GAP_CHARACTER) * np.ones(
-                 self.phrase_length - _ascii.size,
-                 dtype=int)
-             )
+            ord(GAP_CHARACTER) * np.ones(
+                self.phrase_length - _ascii.size,
+                dtype=int)
+            )
         )
 
         if (_ascii == ord(GAP_CHARACTER)).all():
@@ -152,7 +131,7 @@ class AmericanNationalCorpusDataset(Dataset):
         xs = xs.reshape(-1, self.ascii_size)
         return ''.join(
             chr(x) if x != ord(GAP_CHARACTER) else "_"
-            for x in np.argmax(xs, axis=1)
+                for x in np.argmax(xs, axis=1)
         )
 
 
