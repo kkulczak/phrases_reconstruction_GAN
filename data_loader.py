@@ -67,7 +67,10 @@ class AmericanNationalCorpusDataset(Dataset):
         ).numpy()
 
     def build_windowed_phrase(self, feat):
-        return feat[self.concat_window_indexes].reshape(self.phrase_length, -1)
+        return feat[self.concat_window_indexes].reshape(
+            self.phrase_length,
+            self.concat_window * self.ascii_size
+        ).astype(np.float32)
 
     def preprocess_phrase(self, phrase):
         lengths = np.array([len(x) for x in phrase])

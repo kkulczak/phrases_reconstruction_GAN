@@ -70,19 +70,29 @@ def train(config, save_dir, device='cpu'):
         noisy_phrases,
         batch_size=config['batch_size'],
         num_workers=config['num_workers'],
-        shuffle=False
+        shuffle=False,
+        drop_last=True
     )
 
     test_real_data_loader = DataLoader(
         real_phrases,
         batch_size=config['batch_size'],
         num_workers=config['num_workers'],
-        shuffle=False
+        shuffle=False,
+        drop_last=True
     )
 
     generator = GeneratorNet(config).to(device)
     discriminator = DiscriminatorNet(config).to(device)
 
+    def show_params(model: GeneratorNet):
+        for k,v in  model.state_dict().items():
+            print(f'{k:<30} {str(tuple(v.shape)):<16} {v.mean().item():.6f} {v.std().item():.6f}')
+    print('Generator')
+    show_params(generator)
+    print('Discriminator')
+    show_params(discriminator)
+    # exit(0)
     optimizer_gen = optim.Adam(
         generator.parameters(),
         lr=config['gen_learning_rate'],
